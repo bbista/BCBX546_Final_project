@@ -1,5 +1,5 @@
 # BCBX546_Final_project
-## Group members: Dandan Zhang, Bisanta Bista, Ping Kang, Micheal Murphy, and Samantha Snodgrass
+## Group members: Dandan Zhang, Basanta Bista, Ping Kang, Micheal Murphy, and Samantha Snodgrass
 Our paper of interest: RiboTag Translatomic Profiling of _Drosophila_ oenocytes under aging and oxidative stress
 Authors: Kerui Huang, Wenhao Chen, Fang Zhu, Hua Bai
 Published: N/A, first posted on bioRxiv Feb 26, 2018
