@@ -38,7 +38,4 @@ fastqc Galaxy6-[H2OY-1_S16_L002_R1_001.fastq].fastqsanger
 fastqc Galaxy9-[PQO-1_S22_L002_R1_001.fastq].fastqsanger
 
 
-java -jar trimmomatic-0.30.jar SE s_1_1_sequence.txt.gz lane1_forward.fq.gz
-ILLUMINACLIP:TruSeq3-SE:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15
-MINLEN:36
 
