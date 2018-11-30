@@ -1,0 +1,115 @@
+---
+title: "cummeRbund_Analysis"
+author: "Samantha Snodgrass"
+date: "November 29, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal
+* Use cummeRbund to analyze the output of cuffdiff
+* Recreate some of the figures from Kerui et al's paper (or at least verify the genes identified as differentially expressed between different conditions)
+## Set up
+Load/install the below packages
+```{r}
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+#BiocManager::install("cummeRbund", version = "3.8")
+#BiocManager::install("rtracklayer", version = "3.8")
+#BiocManager::install("Gviz", version = "3.8")
+library(RSQLite)
+library(ggplot2)
+library(reshape2)
+library(plyr)
+library(fastcluster)
+library(BiocGenerics)
+library(cummeRbund)
+library(rtracklayer)
+library(Gviz)
+```
+Load the data
+```{r}
+cuff <- readCufflinks("cuffdiff") #This is the directory where all the cuff diff output files are stored
+cuff #tells you what's in your database
+samples(cuff) #tells you what the sample labels are
+```
+# Global statistics and Quality Control
+Dispersion plots are a way to check for overdispersion within the RNA-seq data
+```{r}
+disp <- dispersionPlot(genes(cuff))
+disp
+```
+Matrix of pairwise scatterplots
+```{r}
+s <- csScatterMatrix(genes(cuff))
+s
+```
+Volcano plots show the relationship between fold-change and significance level, and it's a two way comparision. Thus helping to show the interaction of two variables/treatments.
+```{r}
+v <- csVolcanoMatrix(genes(cuff))
+v
+```
+Specific scatterplots
+```{r}
+water.trt <- csScatter(genes(cuff), "H20Y", "H2OO", smooth = T)
+water.trt
+pq.trt <- csScatter(genes(cuff), "PQY", "PQO", smooth = T)
+pq.trt
+young.trt <- csScatter(genes(cuff), "H20Y", "PQY", smooth = T)
+young.trt
+aged.trt <- csScatter(genes(cuff), "H2OO", "PQO", smooth = T)
+aged.trt
+```
+This does not look like her Figure 3 panels B through D.
+Perhaps there is a filtering step that is missing between CuffDiff output and this analysis?
+"After normalization, differentially expressed protein-coding transcripts were obtained using [the] following cut-off values, false discovery rate (FDR) <=0.05 and fold-change >=2."
+
+Let's specifically look at genes identified as differentially expressed
+```{r}
+gene.diff <- diffData(genes(cuff)) # pull out differentially expressed genes from output files
+head(gene.diff)
+```
+From above, the fold change criteria is probably met, but not the FDR (q in this case)?
+```{r}
+dim(gene.diff)
+```
+
+Let's try to pull out the significant features. 
+The following code comes from the cummeRbund manual
+```{r}
+mySigGeneIds <-getSig(cuff,alpha = 0.05,level = 'genes')
+head(mySigGeneIds)
+length(mySigGeneIds)
+```
+That seemed to work, so let's try to get all the different comparisons pulled out
+```{r}
+water.siggeneIDs<-getSig(cuff,x='H2OO',y='H20Y',alpha = 0.05,level = 'genes')
+pq.siggeneIDs<-getSig(cuff,x='PQO',y='PQY',alpha = 0.05,level = 'genes')
+young.siggeneIDs<-getSig(cuff,x='PQY',y='H20Y',alpha = 0.05,level = 'genes')
+aged.siggeneIDs<-getSig(cuff,x='H2OO',y='PQO',alpha = 0.05,level = 'genes')
+length(water.siggeneIDs)
+length(pq.siggeneIDs)
+length(young.siggeneIDs)
+length(aged.siggeneIDs)
+```
+The sum of the counts for paraquat treatment in fig3 G and H is 1294 (not = to 2505).
+But let's keep going and create a CuffGeneSet object of these different groups of significant genes
+```{r}
+water.siggenes <- getGenes(cuff,water.siggeneIDs)
+pq.siggenes <- getGenes(cuff,pq.siggeneIDs)
+young.siggenes <- getGenes(cuff,young.siggeneIDs)
+aged.siggenes <- getGenes(cuff,aged.siggeneIDs)
+water.siggenes
+pq.siggenes
+young.siggenes
+aged.siggenes
+```
+I'm not seeing a way to see this information in a data frame format, but there is this table option. 
+```{r}
+mySigTable<-getSigTable(cuff, alpha = 0.05,level = 'genes')
+head(mySigTable)
+```
+There's 6,557 rows in this table
