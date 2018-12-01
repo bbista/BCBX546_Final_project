@@ -29,6 +29,7 @@ library(BiocGenerics)
 library(cummeRbund)
 library(rtracklayer)
 library(Gviz)
+library(tidyverse)
 ```
 Load the data
 ```{r}
@@ -96,6 +97,7 @@ length(young.siggeneIDs)
 length(aged.siggeneIDs)
 ```
 The sum of the counts for paraquat treatment in fig3 G and H is 1294 (not = to 2505).
+### But does it matter for x and y axis? Like am I getting only 1/2 of the possible comparisons?
 But let's keep going and create a CuffGeneSet object of these different groups of significant genes
 ```{r}
 water.siggenes <- getGenes(cuff,water.siggeneIDs)
@@ -113,3 +115,60 @@ mySigTable<-getSigTable(cuff, alpha = 0.05,level = 'genes')
 head(mySigTable)
 ```
 There's 6,557 rows in this table
+
+# More scatterplots
+I'm going to try and just use the significant genes to make the scatter plot
+```{r}
+water.scatter <- csScatter(water.siggenes, x='H20Y',y='H2OO', smooth = T)
+water.scatter
+```
+Hmmmm... this doesn't seem right.
+Let's try just re-coloring significant genes?
+Long story short, it didn't work
+```{r}
+#library(tidyverse)
+#filteredgene.diff <- as_tibble(gene.diff)
+#filteredgene.diff <- filter(filteredgene.diff, status != "NOTEST")
+#filteredgene.diff <- filter(filteredgene.diff, q != 1)
+#filteredgene.diff <- filter(filteredgene.diff, q <= 0.05)
+#water.scatter1 <-csScatter(genes(cuff), "H20Y", "H2OO", smooth = T, drawRug = F)
+#water.scatter1 +geom_point((aes(color=(p_value <=0.05))))
+
+```
+# Annotated Gene table
+I have a gff file of the fly reference genome (dmp6) and I'm going to try and see if there's a way to read it in with cufflinks (but it may require it to be gtf)
+```{r}
+cuff.anno <- readCufflinks(dbFile = "/cuffdiff/cuffData.db" ,gtfFile = "/cuffdiff/DM6.gtf")
+```
+
+Retry gene.diff on annotated cuffset
+```{r}
+annogene.diff <- diffData(genes(cuff.anno)) # pull out differentially expressed genes from output files
+head(annogene.diff)
+```
+```{r}
+annotated.test <- annotation(genes(cuff.anno)) #creates dataframe for the annotations
+```
+
+```{r}
+annotated.diff <- merge.data.frame(annotated.test, annogene.diff, by = "gene_id") #merges dataframes of annotations and differential expressed gene ids
+annotated.diff$class_code <- NULL #removes unwanted columns
+annotated.diff$nearest_ref_id <- NULL
+annotated.diff$length <- NULL
+annotated.diff$coverage <- NULL
+annotated.diff$feature_id <- NULL
+annotated.diff$isoform_id <- NULL
+annotated.diff$seqnames <- NULL
+annotated.diff$source <- NULL
+annotated.diff$type <- NULL
+annotated.diff$start <- NULL
+annotated.diff$end <- NULL
+annotated.diff$score <- NULL
+annotated.diff$strand <- NULL
+annotated.diff$frame <- NULL
+head(annotated.diff)
+```
+```{r}
+write_csv(annotated.diff, "./annotated.diff.csv")
+```
+
