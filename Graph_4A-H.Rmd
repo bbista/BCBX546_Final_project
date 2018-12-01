@@ -19,7 +19,7 @@ BiocManager::install("enrichplot", version = "3.8")
 
 ```{r}
 library(R.utils)
-Cuffdiff <- read.csv("~/BCBX546_Final_project/GSE112146_Cuffdiff_oenocyte_translation_all_samples_annotated.xlsx", fill=TRUE, skipNul=TRUE)
+Cuffdiff <- read.csv("~/BCBX546_Final_project/GSE112146_Cuffdiff_oenocyte_translation_all_samples_annotated.csv", fill=TRUE, skipNul=TRUE)
 head(Cuffdiff)
 ```
 
