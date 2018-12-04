@@ -7,7 +7,7 @@
 #SBATCH --nodes=1   # number of nodes
 #SBATCH --ntasks-per-node=16   # 16 processor core(s) per node 
 #SBATCH --job-name="tophat"
-#SBATCH --mail-user=bbista@iastate.edu   # email address
+#SBATCH --mail-user=   # email address
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
 #SBATCH --mail-type=FAIL
