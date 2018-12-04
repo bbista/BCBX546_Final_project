@@ -4,7 +4,7 @@
 #SBATCH --time=24:00:00   # walltime limit (HH:MM:SS)
 #SBATCH --nodes=1   # number of nodes
 #SBATCH --ntasks-per-node=16   # 16 processor core(s) per node 
-#SBATCH --mail-user=bbista@iastate.edu   # email address
+#SBATCH --mail-user=  # email address
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
 #SBATCH --mail-type=FAIL
