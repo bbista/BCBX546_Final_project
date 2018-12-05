@@ -5,6 +5,9 @@ Authors: Kerui Huang, Wenhao Chen, Fang Zhu, Hua Bai
 Published: N/A, first posted on bioRxiv Feb 26, 2018
 http://dx.doi.org/10.1101/272179
 
+## The description of the contents of repository
+Our repository includes a readme file, original information from the paper we work on,the data folder we generated and indivial work from each of five group members.
+
 ## Criteria for the project
 See an example of a well documented study: https://github.com/timbeissinger/Maize-Teo-Scripts
 ### Provide documentation for an undocumented study
