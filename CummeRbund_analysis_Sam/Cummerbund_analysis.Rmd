@@ -1,0 +1,275 @@
+---
+title: "cummeRbund_Analysis"
+author: "Samantha Snodgrass"
+date: "November 29, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Goal
+* Use cummeRbund to analyze the output of cuffdiff
+* Recreate some of the figures from Kerui et al's paper (or at least verify the genes identified as differentially expressed between different conditions)
+## Set up
+Load/install the below packages
+```{r}
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+#BiocManager::install("cummeRbund", version = "3.8")
+#BiocManager::install("rtracklayer", version = "3.8")
+#BiocManager::install("Gviz", version = "3.8")
+library(RSQLite)
+library(ggplot2)
+library(reshape2)
+library(plyr)
+library(fastcluster)
+library(BiocGenerics)
+library(cummeRbund)
+library(rtracklayer)
+library(Gviz)
+library(tidyverse)
+```
+Load the data
+```{r}
+cuff <- readCufflinks("cuffdiff") #This is the directory where all the cuff diff output files are stored
+cuff #tells you what's in your database
+samples(cuff) #tells you what the sample labels are
+```
+# Global statistics and Quality Control
+Dispersion plots are a way to check for overdispersion within the RNA-seq data
+```{r}
+disp <- dispersionPlot(genes(cuff))
+disp
+```
+Matrix of pairwise scatterplots
+```{r}
+s <- csScatterMatrix(genes(cuff))
+s
+```
+Volcano plots show the relationship between fold-change and significance level, and it's a two way comparision. Thus helping to show the interaction of two variables/treatments.
+```{r}
+v <- csVolcanoMatrix(genes(cuff))
+v
+```
+Specific scatterplots
+```{r}
+water.trt <- csScatter(genes(cuff), "H20Y", "H2OO", smooth = T)
+water.trt
+pq.trt <- csScatter(genes(cuff), "PQY", "PQO", smooth = T)
+pq.trt
+young.trt <- csScatter(genes(cuff), "H20Y", "PQY", smooth = T)
+young.trt
+aged.trt <- csScatter(genes(cuff), "H2OO", "PQO", smooth = T)
+aged.trt
+```
+This does not look like her Figure 3 panels B through D.
+Perhaps there is a filtering step that is missing between CuffDiff output and this analysis?
+"After normalization, differentially expressed protein-coding transcripts were obtained using [the] following cut-off values, false discovery rate (FDR) <=0.05 and fold-change >=2."
+
+Let's specifically look at genes identified as differentially expressed
+```{r}
+gene.diff <- diffData(genes(cuff)) # pull out differentially expressed genes from output files
+head(gene.diff)
+```
+From above, the fold change criteria is probably met, but not the FDR (q in this case)?
+```{r}
+dim(gene.diff)
+```
+
+Let's try to pull out the significant features. 
+The following code comes from the cummeRbund manual
+```{r}
+mySigGeneIds <-getSig(cuff,alpha = 0.05,level = 'genes')
+head(mySigGeneIds)
+length(mySigGeneIds)
+```
+That seemed to work, so let's try to get all the different comparisons pulled out
+```{r}
+water.siggeneIDs<-getSig(cuff,x='H2OO',y='H20Y',alpha = 0.05,level = 'genes')
+pq.siggeneIDs<-getSig(cuff,x='PQO',y='PQY',alpha = 0.05,level = 'genes')
+young.siggeneIDs<-getSig(cuff,x='PQY',y='H20Y',alpha = 0.05,level = 'genes')
+aged.siggeneIDs<-getSig(cuff,x='H2OO',y='PQO',alpha = 0.05,level = 'genes')
+length(water.siggeneIDs)
+length(pq.siggeneIDs)
+length(young.siggeneIDs)
+length(aged.siggeneIDs)
+```
+The sum of the counts for paraquat treatment in fig3 G and H is 1294 (not = to 2505).
+### But does it matter for x and y axis? Like am I getting only 1/2 of the possible comparisons?
+But let's keep going and create a CuffGeneSet object of these different groups of significant genes
+```{r}
+water.siggenes <- getGenes(cuff,water.siggeneIDs)
+pq.siggenes <- getGenes(cuff,pq.siggeneIDs)
+young.siggenes <- getGenes(cuff,young.siggeneIDs)
+aged.siggenes <- getGenes(cuff,aged.siggeneIDs)
+water.siggenes
+pq.siggenes
+young.siggenes
+aged.siggenes
+```
+I'm not seeing a way to see this information in a data frame format, but there is this table option. 
+```{r}
+mySigTable<-getSigTable(cuff, alpha = 0.05,level = 'genes')
+head(mySigTable)
+```
+There's 6,557 rows in this table
+
+# More scatterplots
+I'm going to try and just use the significant genes to make the scatter plot
+```{r}
+water.scatter <- csScatter(water.siggenes, x='H20Y',y='H2OO', smooth = T)
+water.scatter
+```
+Hmmmm... this doesn't seem right.
+Let's try just re-coloring significant genes?
+Long story short, it didn't work
+```{r}
+#library(tidyverse)
+#filteredgene.diff <- as_tibble(gene.diff)
+#filteredgene.diff <- filter(filteredgene.diff, status != "NOTEST")
+#filteredgene.diff <- filter(filteredgene.diff, q != 1)
+#filteredgene.diff <- filter(filteredgene.diff, q <= 0.05)
+#water.scatter1 <-csScatter(genes(cuff), "H20Y", "H2OO", smooth = T, drawRug = F)
+#water.scatter1 +geom_point((aes(color=(p_value <=0.05))))
+
+```
+#########################
+# Annotated Gene Table
+#########################
+I have a gff file of the fly reference genome (dmp6) and I'm going to try and see if there's a way to read it in with cufflinks (but it may require it to be gtf)
+```{r}
+cuff.anno <- readCufflinks(dbFile = "/cuffdiff/cuffData.db" ,gtfFile = "/cuffdiff/DM6.gtf")
+```
+
+Retry gene.diff on annotated cuffset
+```{r}
+annogene.diff <- diffData(genes(cuff.anno)) # pull out differentially expressed genes from output files
+head(annogene.diff)
+```
+```{r}
+annotated.test <- annotation(genes(cuff.anno)) #creates dataframe for the annotations
+annotated.test$class_code <- NULL #removes unwanted columns
+annotated.test$nearest_ref_id <- NULL
+annotated.test$length <- NULL
+annotated.test$coverage <- NULL
+annotated.test$feature_id <- NULL
+annotated.test$isoform_id <- NULL
+annotated.test$seqnames <- NULL
+annotated.test$source <- NULL
+annotated.test$type <- NULL
+annotated.test$start <- NULL
+annotated.test$end <- NULL
+annotated.test$score <- NULL
+annotated.test$strand <- NULL
+annotated.test$frame <- NULL
+```
+
+```{r}
+annotated.diff <- merge.data.frame(annotated.test, annogene.diff, by = "gene_id") #merges dataframes of annotations and differential expressed gene ids
+head(annotated.diff)
+```
+
+```{r}
+write_csv(annotated.diff, "./annotated.diff.csv") #writes the table to csv file
+```
+### Recreating the venn diagrams (figure 3E through 3H)
+The goal is to figure out the number of genes that are up and down regulated in a number of comparisons between treatment groups. Requires (1) figuring out which genes are up and down regulated for each condition, (2) parsing out which ones are similarly changed between conditions, and (3) counting the number of significant genes within each comparison.
+
+```{r}
+water <- diffData(genes(cuff.anno), x = "H20Y", y = "H2OO")
+water.filtered <- filter(water, significant == "yes")
+anno.water <- merge.data.frame(annotated.test, water.filtered, by = "gene_id")
+up.old <- filter(anno.water, value_1 > value_2) #value1 = H2OO, value2= H2OY
+down.old <- filter(anno.water, value_1 < value_2) 
+```
+
+Figure 3E: Aging corresponds to the genes different between young and old due to aging (so yellow is a comparison of young H2O and old H2O groups) while PQ relates to genes different due to PQ treatment (so blue is a comparison of young PQ and water groups).
+Young is considered the default/control for age while water is the control for treatment.
+Figure 3F is the same comparison, only for down regulation
+```{r}
+####
+#for yellow circle 3E
+####
+agingH2O <- diffData(genes(cuff.anno), x = "H20Y", y = "H2OO") #collects difference between young/old water treated groups
+F.agingH2O <- filter(agingH2O, significant == "yes") #filters for only significant genes
+anno.agingH2O <- merge.data.frame(annotated.test, F.agingH2O, by = "gene_id") #merges with the annotation file
+
+agingPQ <- diffData(genes(cuff.anno), x = "PQY", y = "PQO") #collects difference between young/old PQ treated groups
+F.agingPQ <- filter(agingPQ, significant == "yes") #filters for only significant genes
+anno.agingPQ <- merge.data.frame(annotated.test, F.agingPQ, by = "gene_id") #merges with the annotation file
+
+up_agingH2O <- filter(anno.agingH2O, value_1 > value_2)#value1 = H2OO, value2= H2OY
+up_agingPQ <- filter(anno.agingPQ, value_1 > value_2)#value1 = PQO, value2= PQY
+#up_aging <- rbind(up_agingH2O,up_agingPQ) #brings all up-regulated genes together
+#up_aging <- distinct(up_aging,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalyellowcircleE <- nrow(up_aging)
+
+#####
+#Yellow circle 3F
+#####
+down_agingH2O <- filter(anno.agingH2O, value_1 < value_2)#value1 = H2OO, value2= H2OY
+down_agingPQ <- filter(anno.agingPQ, value_1 < value_2)#value1 = PQO, value2= PQY
+#down_aging <- rbind(down_agingH2O,down_agingPQ) #brings all down-regulated genes together
+#down_aging <- distinct(down_aging,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalyellowcircleF <- nrow(down_aging)
+```
+
+```{r}
+####
+#for Blue circle 3E and F
+####
+PQold <- diffData(genes(cuff.anno), x = "H2OO", y = "PQO") #collects difference between PQ/water treated old groups
+PQold <- filter(PQold, significant == "yes") #filters for only significant genes
+anno.PQold <- merge.data.frame(annotated.test, PQold, by = "gene_id") #merges with the annotation file
+
+PQyoung <- diffData(genes(cuff.anno), x = "H20Y", y = "PQY") #collects difference between PQ/water treated young groups
+PQyoung <- filter(PQyoung, significant == "yes") #filters for only significant genes
+anno.PQyoung <- merge.data.frame(annotated.test, PQyoung, by = "gene_id") #merges with the annotation file
+
+up_PQold <- filter(anno.PQold, value_1 < value_2)#value1 = H2OO, value2= PQO
+up_PQyoung <- filter(anno.PQyoung, value_1 < value_2)#value1 = H2OY, value2= PQY
+#up_PQ <- rbind(up_PQold,up_PQyoung) #brings all up-regulated genes together
+#up_PQ <- distinct(up_PQ,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalbluecircleE <- nrow(up_PQ)
+
+down_PQold <- filter(anno.PQold, value_1 > value_2)#value1 = H2OO, value2= PQO
+down_PQyoung <- filter(anno.PQyoung, value_1 > value_2)#value1 = H2OY, value2= PQY
+#down_PQ <- rbind(down_PQold,down_PQyoung) #brings all down-regulated genes together
+#down_PQ <- distinct(down_PQ,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalbluecircleF <- nrow(down_PQ)
+```
+Now we need to figure out the overlap between the up's/down's between Aging and PQ
+```{r}
+#3E
+#yellow = just H2O treatments of old/young, blue = just young treatments H2O and PQ
+overlap3E <- merge.data.frame(up_agingH2O,up_PQyoung,by="gene_id")
+nrow(up_agingH2O) - nrow(overlap3E) #yellow section number
+nrow(overlap3E) #overlap number
+nrow(up_PQyoung) - nrow(overlap3E) #blue section number
+```
+```{r}
+#3F
+#yellow = just H2O treatments of old/young, blue = just young treatments H2O and PQ
+overlap3F <- merge.data.frame(down_agingH2O,down_PQyoung,by="gene_id")
+nrow(down_agingH2O) - nrow(overlap3F) #yellow section number
+nrow(overlap3F) #overlap number
+nrow(down_PQyoung) - nrow(overlap3F) #blue section number
+```
+```{r}
+#3G
+#yellow = just young treatments H2O and PQ, blue = just old treatments H2O and PQ
+overlap3G <- merge.data.frame(up_PQyoung,up_PQold,by="gene_id")
+nrow(up_PQyoung) - nrow(overlap3G) #yellow section number
+nrow(overlap3G) #overlap number
+nrow(up_PQold) - nrow(overlap3G) #blue section number
+```
+```{r}
+#3H
+#yellow = just young treatments H2O and PQ, blue = just old treatments H2O and PQ
+overlap3H <- merge.data.frame(down_PQyoung,down_PQold,by="gene_id")
+nrow(down_PQyoung) - nrow(overlap3H) #yellow section number
+nrow(overlap3H) #overlap number
+nrow(down_PQold) - nrow(overlap3H) #blue section number
+```
