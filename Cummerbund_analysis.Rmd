@@ -135,7 +135,9 @@ Long story short, it didn't work
 #water.scatter1 +geom_point((aes(color=(p_value <=0.05))))
 
 ```
-# Annotated Gene table
+#########################
+# Annotated Gene Table
+#########################
 I have a gff file of the fly reference genome (dmp6) and I'm going to try and see if there's a way to read it in with cufflinks (but it may require it to be gtf)
 ```{r}
 cuff.anno <- readCufflinks(dbFile = "/cuffdiff/cuffData.db" ,gtfFile = "/cuffdiff/DM6.gtf")
@@ -148,27 +150,126 @@ head(annogene.diff)
 ```
 ```{r}
 annotated.test <- annotation(genes(cuff.anno)) #creates dataframe for the annotations
+annotated.test$class_code <- NULL #removes unwanted columns
+annotated.test$nearest_ref_id <- NULL
+annotated.test$length <- NULL
+annotated.test$coverage <- NULL
+annotated.test$feature_id <- NULL
+annotated.test$isoform_id <- NULL
+annotated.test$seqnames <- NULL
+annotated.test$source <- NULL
+annotated.test$type <- NULL
+annotated.test$start <- NULL
+annotated.test$end <- NULL
+annotated.test$score <- NULL
+annotated.test$strand <- NULL
+annotated.test$frame <- NULL
 ```
 
 ```{r}
 annotated.diff <- merge.data.frame(annotated.test, annogene.diff, by = "gene_id") #merges dataframes of annotations and differential expressed gene ids
-annotated.diff$class_code <- NULL #removes unwanted columns
-annotated.diff$nearest_ref_id <- NULL
-annotated.diff$length <- NULL
-annotated.diff$coverage <- NULL
-annotated.diff$feature_id <- NULL
-annotated.diff$isoform_id <- NULL
-annotated.diff$seqnames <- NULL
-annotated.diff$source <- NULL
-annotated.diff$type <- NULL
-annotated.diff$start <- NULL
-annotated.diff$end <- NULL
-annotated.diff$score <- NULL
-annotated.diff$strand <- NULL
-annotated.diff$frame <- NULL
 head(annotated.diff)
 ```
+
 ```{r}
-write_csv(annotated.diff, "./annotated.diff.csv")
+write_csv(annotated.diff, "./annotated.diff.csv") #writes the table to csv file
+```
+### Recreating the venn diagrams (figure 3E through 3H)
+The goal is to figure out the number of genes that are up and down regulated in a number of comparisons between treatment groups. Requires (1) figuring out which genes are up and down regulated for each condition, (2) parsing out which ones are similarly changed between conditions, and (3) counting the number of significant genes within each comparison.
+
+```{r}
+water <- diffData(genes(cuff.anno), x = "H20Y", y = "H2OO")
+water.filtered <- filter(water, significant == "yes")
+anno.water <- merge.data.frame(annotated.test, water.filtered, by = "gene_id")
+up.old <- filter(anno.water, value_1 > value_2) #value1 = H2OO, value2= H2OY
+down.old <- filter(anno.water, value_1 < value_2) 
 ```
 
+Figure 3E: Aging corresponds to the genes different between young and old due to aging (so yellow is a comparison of young H2O and old H2O groups) while PQ relates to genes different due to PQ treatment (so blue is a comparison of young PQ and water groups).
+Young is considered the default/control for age while water is the control for treatment.
+Figure 3F is the same comparison, only for down regulation
+```{r}
+####
+#for yellow circle 3E
+####
+agingH2O <- diffData(genes(cuff.anno), x = "H20Y", y = "H2OO") #collects difference between young/old water treated groups
+F.agingH2O <- filter(agingH2O, significant == "yes") #filters for only significant genes
+anno.agingH2O <- merge.data.frame(annotated.test, F.agingH2O, by = "gene_id") #merges with the annotation file
+
+agingPQ <- diffData(genes(cuff.anno), x = "PQY", y = "PQO") #collects difference between young/old PQ treated groups
+F.agingPQ <- filter(agingPQ, significant == "yes") #filters for only significant genes
+anno.agingPQ <- merge.data.frame(annotated.test, F.agingPQ, by = "gene_id") #merges with the annotation file
+
+up_agingH2O <- filter(anno.agingH2O, value_1 > value_2)#value1 = H2OO, value2= H2OY
+up_agingPQ <- filter(anno.agingPQ, value_1 > value_2)#value1 = PQO, value2= PQY
+#up_aging <- rbind(up_agingH2O,up_agingPQ) #brings all up-regulated genes together
+#up_aging <- distinct(up_aging,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalyellowcircleE <- nrow(up_aging)
+
+#####
+#Yellow circle 3F
+#####
+down_agingH2O <- filter(anno.agingH2O, value_1 < value_2)#value1 = H2OO, value2= H2OY
+down_agingPQ <- filter(anno.agingPQ, value_1 < value_2)#value1 = PQO, value2= PQY
+#down_aging <- rbind(down_agingH2O,down_agingPQ) #brings all down-regulated genes together
+#down_aging <- distinct(down_aging,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalyellowcircleF <- nrow(down_aging)
+```
+
+```{r}
+####
+#for Blue circle 3E and F
+####
+PQold <- diffData(genes(cuff.anno), x = "H2OO", y = "PQO") #collects difference between PQ/water treated old groups
+PQold <- filter(PQold, significant == "yes") #filters for only significant genes
+anno.PQold <- merge.data.frame(annotated.test, PQold, by = "gene_id") #merges with the annotation file
+
+PQyoung <- diffData(genes(cuff.anno), x = "H20Y", y = "PQY") #collects difference between PQ/water treated young groups
+PQyoung <- filter(PQyoung, significant == "yes") #filters for only significant genes
+anno.PQyoung <- merge.data.frame(annotated.test, PQyoung, by = "gene_id") #merges with the annotation file
+
+up_PQold <- filter(anno.PQold, value_1 < value_2)#value1 = H2OO, value2= PQO
+up_PQyoung <- filter(anno.PQyoung, value_1 < value_2)#value1 = H2OY, value2= PQY
+#up_PQ <- rbind(up_PQold,up_PQyoung) #brings all up-regulated genes together
+#up_PQ <- distinct(up_PQ,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalbluecircleE <- nrow(up_PQ)
+
+down_PQold <- filter(anno.PQold, value_1 > value_2)#value1 = H2OO, value2= PQO
+down_PQyoung <- filter(anno.PQyoung, value_1 > value_2)#value1 = H2OY, value2= PQY
+#down_PQ <- rbind(down_PQold,down_PQyoung) #brings all down-regulated genes together
+#down_PQ <- distinct(down_PQ,gene_id, .keep_all = TRUE)#removes duplicate genes
+#totalbluecircleF <- nrow(down_PQ)
+```
+Now we need to figure out the overlap between the up's/down's between Aging and PQ
+```{r}
+#3E
+#yellow = just H2O treatments of old/young, blue = just young treatments H2O and PQ
+overlap3E <- merge.data.frame(up_agingH2O,up_PQyoung,by="gene_id")
+nrow(up_agingH2O) - nrow(overlap3E) #yellow section number
+nrow(overlap3E) #overlap number
+nrow(up_PQyoung) - nrow(overlap3E) #blue section number
+```
+```{r}
+#3F
+#yellow = just H2O treatments of old/young, blue = just young treatments H2O and PQ
+overlap3F <- merge.data.frame(down_agingH2O,down_PQyoung,by="gene_id")
+nrow(down_agingH2O) - nrow(overlap3F) #yellow section number
+nrow(overlap3F) #overlap number
+nrow(down_PQyoung) - nrow(overlap3F) #blue section number
+```
+```{r}
+#3G
+#yellow = just young treatments H2O and PQ, blue = just old treatments H2O and PQ
+overlap3G <- merge.data.frame(up_PQyoung,up_PQold,by="gene_id")
+nrow(up_PQyoung) - nrow(overlap3G) #yellow section number
+nrow(overlap3G) #overlap number
+nrow(up_PQold) - nrow(overlap3G) #blue section number
+```
+```{r}
+#3H
+#yellow = just young treatments H2O and PQ, blue = just old treatments H2O and PQ
+overlap3H <- merge.data.frame(down_PQyoung,down_PQold,by="gene_id")
+nrow(down_PQyoung) - nrow(overlap3H) #yellow section number
+nrow(overlap3H) #overlap number
+nrow(down_PQold) - nrow(overlap3H) #blue section number
+```
