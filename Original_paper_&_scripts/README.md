@@ -1,57 +1,68 @@
-# BCBX546_Final_Project
-## Group members: Dandan Zhang, Basanta Bista, Ping Kang, Michael Murphy, and Samantha Snodgrass
-Our paper of interest: RiboTag Translatomic Profiling of _Drosophila_ oenocytes under aging and oxidative stress
-Authors: Kerui Huang, Wenhao Chen, Fang Zhu, Hua Bai
-Published: N/A, first posted on bioRxiv Feb 26, 2018
-http://dx.doi.org/10.1101/272179
+# This is a group project. There are 5 people in this group. 
 
-## The description of the contents of repository
-Our repository includes a readme file, original information from the paper we work on,the data folder we generated and indivial work from each of five group members.
+# we decided to work on a paper <https://www.biorxiv.org/content/biorxiv/early/2018/02/26/272179.full.pdf>
 
-## Criteria for the project
-See an example of a well documented study: https://github.com/timbeissinger/Maize-Teo-Scripts
-### Provide documentation for an undocumented study
-"Each group will identify analyses from this manuscript to reproduce and document using the computational skills and documentation standards you have learned in class"
-Include: 
-* Downloading, inspecting and describing the data utilized in the study
-* Processing the data if necessary to format them for the analysis the group has chosen to reproduce
-* Rerunning the analysis described in the manuscript using your personal computers or ISU HPC resources
-* Providing visual summaries (_e.g._, ggplot figures) of your results
+# Especially we want to reproduce figure 3 and figure 4
 
-### GitHub Repository Requirements
-"This documentation should be clear and easy to follow and should adhere to the guidelines for the ReScience Journal."
-Include:
-* A top README.md file that describes the contents of your directory
-* An author(s)-YEAR.md file that introduces the original paper, explains the technical details of your replication of analyses and summarizes your replication of the original results
-* A code directory that contains the commented code for the replication
-* A data directory that contains links to data necessary to run your code
+# For Figure 3, there are four categories : PCA, correlation, VennDiagram and Hierarchy Clustering Analysis.
 
-### In-Class Presentation
-"Each group will have ~20 minutes to present their work on either December 5th or 7th. Each presentation should include:"
-* Background on the biological question being investigated
-* A escription of the workflow carried out by the group
-* An overview of the group's documentation
-* Presentation of results including comparison to results from the published paper
+PCA___figure 3A
+http://www.r-bloggers.com/computing-and-visualizing-pca-in-r/
+# load, data
+data(x)
 
-## Sections of the project
-### Running Computing Differential Expression
-This step starts with the raw reads
-* Raw reads are mapped to a reference genome (TopHat2)
-* Mapped reads are then processed (Cufflinks)
-* Processed reads need to be checked for differential expression between treatments (CuffDiff)
-The output is the differentially expressed genes (file type?)
-This will require HPC resources (Condo)
+head(data,3)
+# log transform
+log.y <- log(x[,1:4])
+y.species = x[,5]
+# apply PCA
+# scale. = TRUE is highly advisable, but default is FALSE
+y.pca <- prcomp(log.y,
+                cente = TRUE,
+                scale. = TRUE)
+# print method
+print(y.pca)
+# plot method
+plot(y.pca, type ='1')
+# summary method
+summary(y.pca)
+# predict pcs
+predict(y.pca,
+        newdata = tail(log.y,2))
+# plot with ffbiplot 
+library(devtools)
+install_github("ggbiplot","vqv")
 
-### Recreating Figures
-#### Figure 3:
-* PCA between treatments(?)
-* Identify which GO terms are associated with up and down expression between young and aged groups within treatments
-* Hierarchical clustering of reads/GO terms (?) with a heat map below the clustering dendrogram indicating differential expression
-* J and K show GO term enrichment for cluster 3 and 5 respectively
-#### Figure 4:
-* C through H: Enrichment of particular GO terms or proteins/complexes across age
-* I through K: Heatmaps of expression by treatment types
-#### Figure 5:
-* Fold change graphs for particular genes associated with important pathways dealing with oxidative stress
+library(ggbiplot)
+g <- ggbiplot(y.pca, obs.scale = 1, var.scale = 1,
+              groups = y.species, ellipse = TRUE,
+              circle = TRUE)
+g <- g + scale_color_discrete(name = '')
+g = <— g + theme(legend.direction = 'horizontal',
+                 legend.position = 'top')
+print(g)
 
-All components of the figures will first be written as a script using the available differential expression data. These scripts will then be re-run using the output from re-running of the differential expression to visualize differences/similarities between differential expression runs. It will also test the ease of creating scripts for the purpose of generating/regenerating figures.  
+Correlation_figure 3B, 3C, 3D
+# load data
+#if .txt tab file, use this
+my_data <- read.delim(file.choose())
+#if .csv file, use this
+my_data <- read.csv(file.choose())
+#use mtcars file in R as an example
+data("mtcars")#load data
+mtcars
+my_data <- mtcars[,c(1,3,4,5,6,7)]
+head(my_data, 6) # print the first 6 rows
+res <- cor(my_data)#calculate correlation coefficients between the possible pairs of variable are shown.
+res
+round(res, 2)#round the decimals to 2 position
+cor(my_data, use = "complete.obs")#handle missing values by case-wise deletion.
+install.packages("Hmisc")#Hmisc package can compute the significance levels for spearman and pearson correlations with rcorr(). It returns both the correlation coefficients and p-value of the correlation for all possible pairs of columns in the data table.
+library("Hmisc")
+res2 <- rcorr(as.matrix(my_data))
+res2
+res2$r#extract the correlation coefficients
+res2$P#extract the p-values
+
+
+
