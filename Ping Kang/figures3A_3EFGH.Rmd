@@ -1,0 +1,351 @@
+---
+title: "final_project"
+author: "Ping Kang"
+date: "November 12, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+#install the packages I need for my project
+install.packages("devtools")
+library(devtools)
+install_github("vqv/ggbiplot",force = TRUE)
+library(ggbiplot)
+library(ggplot2)
+library(tidyr)
+```
+
+```{r}
+#generate table for PCA(scripts are from Basanta)
+anno=read.table("cuffdiff/genes.read_group_tracking", header=T,stringsAsFactors = F)
+anno$condition_replicate= paste0(anno$condition,"_",anno$replicate)
+
+library(reshape2)
+b<-cbind.data.frame(anno$tracking_id,anno$condition_replicate, anno$FPKM)
+molten = melt( anno , id.vars = c( "tracking_id" , "condition_replicate" ) , measure.vars = "FPKM" )
+cast=dcast(b, anno$tracking_id~anno$condition_replicate)
+names(cast)[names(cast) == 'anno$tracking_id'] <- "tracking_id"
+
+write.csv(cast,"PCAdata.csv")
+```
+
+
+```{r}
+library(dplyr)
+#PCA from reproduced data
+#PCA___figure 3A
+data = read.csv("PCAdata.csv")
+head(data,3)
+colnames(data)
+df <- select(data,"H20Y_0","H20Y_1","H20Y_2","H2OO_0","H2OO_1","H2OO_2","PQO_0","PQO_1","PQO_2","PQY_0","PQY_1","PQY_2")
+head(df,3)
+test <- t(df)
+x <- rownames(test)
+x
+#test which columns have constant values 
+#which(apply(test, 2, var)==0)
+test <- test[ , apply(test, 2, var) != 0]#remove the constant values
+pca <- prcomp(test,scale. = TRUE)
+
+g <- ggbiplot(pca, obs.scale=1, var.scale = 1,
+               ellipse = TRUE,color =rownames(test),
+              circle = TRUE, var.axes = F)
+g <- g + geom_point(aes(colour = x), size = 3)
+g <- g + scale_color_discrete(name = "")
+g <- g + theme(legend.direction = 'horizontal',
+               legend.position = 'top')
+g
+quartz.save("figure3ar.png")
+```
+
+
+```{r}
+#PCA from Kerui's data
+#PCA___figure 3A
+data = read.csv("cuffnorm2_modified.csv")
+head(data,3)
+str(data)
+test <- t(data)
+str(test)
+x <- rownames(test)
+test <- test[ , apply(test, 2, var) != 0]
+pca <- prcomp(test,scale. = TRUE)
+head(pca,3)
+g <- ggbiplot(pca, obs.scale = 1, var.scale = 1,
+               ellipse = TRUE,color =rownames(test),
+              circle = TRUE, var.axes = F)
+g <- g + geom_point(aes(colour = x), size = 3)
+g <- g + scale_color_discrete(name = "")
+g <- g + theme(legend.direction = 'horizontal',
+               legend.position = 'top')
+g
+quartz.save("figure3a.png")
+```
+
+
+
+```{r}
+#subset data for Figure 3BCD from Kerui's table
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+all <- read_excel("~/Desktop/BCB546X/BCB546X/Final_project/GSE112146_Cuffdiff_oenocyte_translation_all_samples_annotated.xlsx")
+head(all,2)
+all_df <- data.frame(all)
+```
+
+```{r}
+###Figure 3C
+H2O_PQ_Y <- subset(all_df, sample_1  == "H2O young" & sample_2 == "PQ young",select = c(sample_1,sample_2,value_1,value_2))
+H2O_PQ_Y$value_1 <-  log10(H2O_PQ_Y$value_1)
+H2O_PQ_Y$value_2 <-  log10(H2O_PQ_Y$value_2)
+head(H2O_PQ_Y,2)
+
+
+H2O_PQ_Y_g <- ggplot(H2O_PQ_Y,aes(x = value_1, y = value_2)) + geom_point() + stat_smooth(method = "lm",col = "#C42126",size = 0.5) 
+H2O_PQ_Y_g <- H2O_PQ_Y_g + labs(x = 'H2O-Young',y = "PQ-Young")
+
+H2O_PQ_Y_g
+quartz.save("figure3c.png")
+
+```
+
+```{r}
+###Figure 3B
+H2O_Y_O <- subset(all_df, sample_1  == "H2O young" & sample_2 == "H2O old",select = c(sample_1,sample_2,value_1,value_2))
+H2O_Y_O$value_1 <-  log10(H2O_Y_O$value_1)
+H2O_Y_O$value_2 <-  log10(H2O_Y_O$value_2)
+head(H2O_Y_O,2)
+
+H2O_Y_O_g <- ggplot(H2O_Y_O,aes(x = value_1, y = value_2)) + geom_point() + stat_smooth(method = "lm",col = "#C42126",size = 0.5) 
+H2O_Y_O_g <- H2O_Y_O_g + labs(x = 'H2O-Young',y = "H2O-Old")
+
+H2O_Y_O_g
+quartz.save("figure3b.png")
+```
+```{r}
+###Figure 3D
+H2O_PQ_O <- subset(all_df, sample_1  == "H2O old" & sample_2 == "PQ old",select = c(sample_1,sample_2,value_1,value_2))
+H2O_PQ_O$value_1 <-  log10(H2O_PQ_O$value_1)
+H2O_PQ_O$value_2 <-  log10(H2O_PQ_O$value_2)
+head(H2O_PQ_O,10)
+
+H2O_PQ_O_g <- ggplot(H2O_PQ_O,aes(x = value_1, y = value_2)) + geom_point() + stat_smooth(method = "lm",col = "#C42126",size = 0.5) 
+H2O_PQ_O_g <- H2O_PQ_O_g + labs(x = 'H2O-Old',y = "PQ-Old")
+
+H2O_PQ_O_g
+quartz.save("figure3d.png")
+```
+
+```{r}
+#calculate r2
+#r2 for figurec
+mx <- as.matrix(H2O_PQ_Y)
+mx[mx=="         -Inf"]="NA"
+head(mx,10)
+df <- data.frame(mx)
+str(df)
+head(df,10)
+m <- lm(as.numeric(df$value_1) ~ as.numeric(df$value_2), na.action=na.exclude,df)
+rs <- summary(m)$r.squared
+rs
+```
+```{r}
+#subset data for Figure 3BCD from reproduced table
+library(tidyverse)
+library(ggplot2)
+all_R <- read_csv("annotated.diff.csv")
+head(all_R,2)
+all_R_df <- data.frame(all_R)
+head(all_R_df,3)
+```
+
+```{r}
+###Figure 3CR
+H2O_PQ_Y_R <- subset(all_R_df, sample_1  == "H20Y" & sample_2 == "PQY",select = c(sample_1,sample_2,value_1,value_2))
+head(H2O_PQ_Y_R,2)
+H2O_PQ_Y_R$value_1 <-  log10(H2O_PQ_Y_R$value_1)
+H2O_PQ_Y_R$value_2 <-  log10(H2O_PQ_Y_R$value_2)
+head(H2O_PQ_Y_R,2)
+
+
+H2O_PQ_Y_R_g <- ggplot(H2O_PQ_Y_R,aes(x = value_1, y = value_2)) + geom_point() + stat_smooth(method = "lm",col = "#C42126",size = 0.5) 
+H2O_PQ_Y_R_g <- H2O_PQ_Y_R_g + labs(x = 'H2O-Young',y = "PQ-Young")
+H2O_PQ_Y_R_g <- H2O_PQ_Y_R_g + annotate(geom="text",x=-2, y=5,label="R^2 =0.6346422",color="red")
+H2O_PQ_Y_R_g
+quartz.save("figure3cr.png")
+```
+```{r}
+#r2 for figurec
+mx <- as.matrix(H2O_PQ_Y_R)
+mx[mx=="         -Inf"]="NA"
+head(mx,10)
+df <- data.frame(mx)
+str(df)
+head(df,10)
+m <- lm(as.numeric(df$value_1) ~ as.numeric(df$value_2), na.action=na.exclude,df)
+rs <- summary(m)$r.squared
+rs
+r^2 =0.6346422
+```
+
+```{r}
+###Figure 3B
+head(all_R_df,6)
+H2O_Y_O_R <- subset(all_R_df, sample_1  == "H2OO" & sample_2 == "H20Y",select = c(sample_1,sample_2,value_1,value_2))
+H2O_Y_O_R$value_1 <-  log10(H2O_Y_O_R$value_1)
+H2O_Y_O_R$value_2 <-  log10(H2O_Y_O_R$value_2)
+head(H2O_Y_O_R,2)
+
+H2O_Y_O_R_g <- ggplot(H2O_Y_O_R,aes(x = value_1, y = value_2)) + geom_point() + stat_smooth(method = "lm",col = "#C42126",size = 0.5) 
+H2O_Y_O_R_g <- H2O_Y_O_R_g + labs(x = 'H2O-Young',y = "H2O-Old")
+H2O_Y_O_R_g <- H2O_Y_O_R_g + annotate(geom="text",x=-2, y=5,label="R^2 = 0.5113952",color="red")
+H2O_Y_O_R_g
+quartz.save("figure3br.png")
+```
+```{r}
+#r2 for figure3br
+
+mx <- as.matrix(H2O_Y_O_R)
+mx[mx=="         -Inf"]="NA"
+head(mx,10)
+df <- data.frame(mx)
+str(df)
+head(df,10)
+m <- lm(as.numeric(df$value_1) ~ as.numeric(df$value_2), na.action=na.exclude,df)
+rs <- summary(m)$r.squared
+rs
+r^2 =0.5113952
+
+
+```
+```{r}
+###Figure 3DR
+head(all_R_df,6)
+H2O_PQ_O_R <- subset(all_R_df, sample_1  == "H2OO" & sample_2 == "PQO",select = c(sample_1,sample_2,value_1,value_2))
+H2O_PQ_O_R$value_1 <-  log10(H2O_PQ_O_R$value_1)
+H2O_PQ_O_R$value_2 <-  log10(H2O_PQ_O_R$value_2)
+head(H2O_PQ_O_R,10)
+
+H2O_PQ_O_g_R <- ggplot(H2O_PQ_O_R,aes(x = value_1, y = value_2)) + geom_point() + stat_smooth(method = "lm",col = "#C42126",size = 0.5) 
+H2O_PQ_O_g_R<- H2O_PQ_O_g_R + labs(x = 'H2O-Old',y = "PQ-Old")
+
+H2O_PQ_O_g_R <- H2O_PQ_O_g_R + annotate(geom="text",x=-2, y=5,label="R^2 = 0.1566782",color="red")
+
+H2O_PQ_O_g_R
+quartz.save("figure3dr.png")
+```
+```{r}
+
+#r2 for figure3dr
+
+mx <- as.matrix(H2O_PQ_O_R)
+mx[mx=="         -Inf"]="NA"
+head(mx,10)
+df <- data.frame(mx)
+str(df)
+head(df,10)
+m <- lm(as.numeric(df$value_1) ~ as.numeric(df$value_2), na.action=na.exclude,df)
+rs <- summary(m)$r.squared
+rs
+r^2 =0.1566782
+```
+
+
+```{r}
+install.packages('VennDiagram')
+library(VennDiagram)
+d <- read_excel("figure_3_E.xlsx")
+head(d,3)
+d_df <- data.frame(d)
+d_df
+
+```
+```{r}
+#Figure 3E
+grid.newpage()
+v <- draw.pairwise.venn(1092, 198, 127, category = c("Age", "PQ"), lty = rep("blank", 2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 0), cat.dist = rep(0.025, 2))
+quartz.save("figure3e.png")
+
+
+
+```
+```{r}
+tiff(v,filename = "~/Desktop/BCB546X/BCB546X/Final_project/figur3e.tiff" ,compression = "lzw")
+grid.draw(venn.plot)
+dev.off()
+```
+
+
+```{r}
+#Figure 3F
+grid.newpage()
+v <- draw.pairwise.venn(2232, 751, 579, category = c("Age", "PQ"), lty = rep("blank", 2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 0), cat.dist = rep(0.025, 2))
+quartz.save("figure3f.png")
+```
+```{r}
+#Figure 3G
+grid.newpage()
+v <- draw.pairwise.venn(198, 213, 11, category = c("Young", "Aged"), lty = rep("blank", 2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 0), cat.dist = rep(0.025, 2))
+quartz.save("figure3g.png")
+```
+
+```{r}
+#Figure 3H
+grid.newpage()
+v <- draw.pairwise.venn(751, 172, 29, category = c("Young", "Aged"), lty = rep("blank", 2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 0), cat.dist = rep(0.025, 2),scaled = FALSE)
+quartz.save("figure3h.png")
+
+```
+
+```{r}
+
+library(plyr)
+r2 <- ddply(H2O_Y_O, function(x) summary(lm(x$value_2 ~ x$value_1)$r.squared)
+r2
+H2O_Y_O_g <- H2O_Y_O_g + geom_text(data = r2,ase(label = paste("r^2 == ",r2,sep="", round(r2,3))))
+```
+
+
+```{r}
+Figure 3BCD(example)
+
+data("mtcars")#load data
+mtcars
+my_data <- mtcars[,c(1,3,4,5,6,7)]
+head(my_data, 6)#print the first 6 rows
+res <- cor(my_data)#calculate correlation coefficients between the possible pairs of variable are shown.
+res
+round(res, 2)#round the decimals to 2 position
+cor(my_data, use = "complete.obs")#handle missing values by case-wise deletion.
+install.packages("Hmisc")#Hmisc package can compute the significance levels for spearman and pearson correlations with rcorr(). It returns both the correlation coefficients and p-value of the correlation for all possible pairs of columns in the data table.
+library("Hmisc")
+res2 <- rcorr(as.matrix(my_data))
+res2
+res2$r#extract the correlation coefficients
+res2$P#extract the p-values
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
