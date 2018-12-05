@@ -7,51 +7,40 @@ http://dx.doi.org/10.1101/272179
 
 ## The description of the contents of repository
 Our repository includes a readme file, original information from the paper we work on,the data folder we generated and indivial work from each of five group members.
+The original data (Illumina sequencing reads) were too large to include in this github repository, but it is available through the publication. 
+Our cuffdiff intermediate and output files were also too large to include in this repository. They can be generated with the scripts included here in `Condo_script_Basanta` and in `cummerbund_analysis_Sam`.
+The annotation, heatmap, etc. data files generated from the cuffdiff output files (and then used to generate figures) are included in this repository in their respective folders. 
 
-## Criteria for the project
+## Goals of the project
 See an example of a well documented study: https://github.com/timbeissinger/Maize-Teo-Scripts
 ### Provide documentation for an undocumented study
 "Each group will identify analyses from this manuscript to reproduce and document using the computational skills and documentation standards you have learned in class"
 Include: 
 * Downloading, inspecting and describing the data utilized in the study
 * Processing the data if necessary to format them for the analysis the group has chosen to reproduce
-* Rerunning the analysis described in the manuscript using your personal computers or ISU HPC resources
-* Providing visual summaries (_e.g._, ggplot figures) of your results
-
-### GitHub Repository Requirements
-"This documentation should be clear and easy to follow and should adhere to the guidelines for the ReScience Journal."
-Include:
-* A top README.md file that describes the contents of your directory
-* An author(s)-YEAR.md file that introduces the original paper, explains the technical details of your replication of analyses and summarizes your replication of the original results
-* A code directory that contains the commented code for the replication
-* A data directory that contains links to data necessary to run your code
-
-### In-Class Presentation
-"Each group will have ~20 minutes to present their work on either December 5th or 7th. Each presentation should include:"
-* Background on the biological question being investigated
-* A escription of the workflow carried out by the group
-* An overview of the group's documentation
-* Presentation of results including comparison to results from the published paper
+* Rerunning the analysis described in the manuscript using our personal computers or ISU HPC resources
+* Providing visual summaries (_e.g._, ggplot figures) of our results
 
 ## Sections of the project
-### Running Computing Differential Expression
+### Computing Differential Expression
+This is covered in `condo_scripts_Basanta`
 This step starts with the raw reads
 * Raw reads are mapped to a reference genome (TopHat2)
 * Mapped reads are then processed (Cufflinks)
 * Processed reads need to be checked for differential expression between treatments (CuffDiff)
-The output is the differentially expressed genes (file type?)
+The output is the differentially expressed genes.
 This will require HPC resources (Condo)
+
+The output from cuffdiff was further processed in cummeRbund, which is detailed in `cummerbund_analysis_Sam`. 
+Essentially, this pulls out siginficantly differentially expressed genes for different comparisons.
+This also creates the information needed for recreating the venn diagrams (Figure 3E through 3H).
 
 ### Recreating Figures
 #### Figure 3:
-* PCA between treatments(?)
-* Identify which GO terms are associated with up and down expression between young and aged groups within treatments
-* Hierarchical clustering of reads/GO terms (?) with a heat map below the clustering dendrogram indicating differential expression
-* J and K show GO term enrichment for cluster 3 and 5 respectively
+* PCA between treatments --> this is described in `PCA_Ping`
+* Hierarchical clustering of reads with a heat map below the clustering dendrogram indicating differential expression --> this is described in `Heatmaps_Dandan`
 #### Figure 4:
-* C through H: Enrichment of particular GO terms or proteins/complexes across age
-* I through K: Heatmaps of expression by treatment types
-#### Figure 5:
-* Fold change graphs for particular genes associated with important pathways dealing with oxidative stress
+* C through H: Enrichment of particular GO terms or proteins/complexes across age --> this is described in `GSEA_analysis_Michael`
+* J through K: Heatmaps of expression by treatment types --> this is described in  `Heatmaps_Dandan`
 
 All components of the figures will first be written as a script using the available differential expression data. These scripts will then be re-run using the output from re-running of the differential expression to visualize differences/similarities between differential expression runs. It will also test the ease of creating scripts for the purpose of generating/regenerating figures.  
